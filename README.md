@@ -1,5 +1,7 @@
 # Atoll / Jelly.
 
+**Live:** https://yan250981.github.io/atoll-jelly/
+
 A jelly diorama of a Maldivian lagoon — one self-contained HTML file, native **WebGPU + WGSL**, simulation in plain JavaScript, zero external requests (no CDN, no fonts, no images, no network).
 
 Part of the editorial **MATERIAL STUDIES** series: a square cut-out block of turquoise jelly with a palm islet, a jetty of overwater bungalows, a seaplane that runs its own day, and reef life gliding through the jelly below.
