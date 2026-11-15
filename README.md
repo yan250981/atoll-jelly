@@ -8,6 +8,19 @@ Part of the editorial **MATERIAL STUDIES** series: a square cut-out block of tur
 
 Open `index.html` in a WebGPU-capable browser (Chrome / Edge 113+). Nothing to install, nothing to build.
 
+## Source
+
+`index.html` is a generated single file. The readable source lives in [`src/`](src/) — one
+HTML shell plus seven JavaScript modules covering math and geometry, the static scene, the
+water sim and the seaplane, the reef life, all the WGSL, the frame assembly and the
+application layer — along with the headless QA harness used to verify it.
+
+```bash
+cd src && bash build.sh     # → ../index.html, byte-identical to the shipped file
+```
+
+See [`src/README.md`](src/README.md) for the module map.
+
 ## What's inside
 
 **Water** — a linear shallow-water sim on a 168² staggered grid at 120 Hz with √(g·depth) wave speed, small surface tension and damping. Finger stirring, slosh when the block tilts, floating bodies hand displaced volume back to the sea, splash craters and bubbles. Rendered as translucent jelly: refraction of the scene behind it, Beer–Lambert absorption per flavour, fresnel sky, caustics, shoreline lace and a lacing foam field.

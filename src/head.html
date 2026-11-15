@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>Atoll Jelly — Material Studies</title>
+<meta name="description" content="A cut-out block of turquoise jelly lagoon, with a palm islet, overwater bungalows and a seaplane that runs its own day. WebGPU.">
+<style>
+:root{
+  --paper:#ece9e3;
+  --ink:#241f1d;
+  --accent:#12a2a6;
+  --line:rgba(36,31,29,.14);
+  --line-soft:rgba(36,31,29,.08);
+  --muted:rgba(36,31,29,.56);
+  --panel:rgba(255,255,255,.46);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--paper);color:var(--ink);}
+body{
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  position:fixed;inset:0;
+}
+#stage{position:fixed;inset:0}
+#gpu{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+#grain{
+  position:fixed;inset:0;pointer-events:none;z-index:5;opacity:.05;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.62'/%3E%3C/svg%3E");
+}
+#ui{position:fixed;inset:0;z-index:10;pointer-events:none;}
+#ui > *{pointer-events:auto}
+
+/* ---------- masthead ---------- */
+.masthead{position:absolute;left:clamp(20px,3.6vw,52px);top:clamp(20px,3.4vh,44px);max-width:min(46vw,430px);}
+.eyebrow{
+  display:flex;align-items:center;gap:9px;
+  font-size:10px;font-weight:600;letter-spacing:.30em;text-transform:uppercase;color:var(--muted);
+}
+.eyebrow:before{content:"";width:22px;height:1px;background:var(--ink);opacity:.5}
+h1{
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+  font-style:italic;font-weight:400;
+  font-size:clamp(38px,5.6vw,66px);line-height:.92;letter-spacing:-.025em;
+  margin:.16em 0 .30em;color:var(--ink);
+}
+h1 .slash{color:var(--accent);font-style:normal;padding:0 .06em;opacity:.9}
+.caption{
+  font-size:12.5px;line-height:1.5;color:var(--muted);max-width:33ch;margin:0 0 14px;
+}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--line);border-radius:999px;padding:5px 11px 5px 9px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;letter-spacing:.16em;
+  color:var(--ink);background:rgba(255,255,255,.4);
+}
+.pill .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(18,162,166,.16)}
+.pill.dead .dot{background:#b23b2e;box-shadow:0 0 0 3px rgba(178,59,46,.14)}
+.pill.dead{color:#b23b2e;border-color:rgba(178,59,46,.3)}
+
+/* ---------- glass panel ---------- */
+.panel{
+  position:absolute;right:clamp(16px,2.6vw,36px);top:clamp(20px,3.4vh,40px);
+  width:264px;padding:16px 16px 14px;
+  border:1px solid rgba(36,31,29,.13);border-radius:16px;
+  background:var(--panel);
+  -webkit-backdrop-filter:blur(18px) saturate(120%);
+  backdrop-filter:blur(18px) saturate(120%);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 18px 40px -28px rgba(36,31,29,.5);
+}
+.panel h2{
+  font-size:9.5px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);
+  margin:0 0 11px;display:flex;justify-content:space-between;align-items:center;
+}
+.acts{display:grid;gap:6px;margin-bottom:12px}
+.btn{
+  -webkit-appearance:none;appearance:none;border:0;cursor:pointer;
+  background:#241f1d;color:#efece5;border-radius:8px;
+  padding:8px 11px;text-align:left;font-size:11.5px;letter-spacing:.02em;
+  font-family:inherit;font-weight:500;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  transition:background .18s ease, transform .12s ease, opacity .18s;
+}
+.btn:hover{background:#12a2a6}
+.btn:active{transform:translateY(1px) scale(.995)}
+.btn .k{font-family:ui-monospace,Menlo,monospace;font-size:9px;opacity:.42;letter-spacing:.06em}
+.btn.on{background:var(--accent)}
+
+.meter{margin:2px 0 11px}
+.meter .track{height:2px;background:var(--line);border-radius:2px;overflow:hidden}
+.meter .fill{height:100%;width:8%;background:var(--accent);transition:width .12s linear}
+.meter .lab{display:flex;justify-content:space-between;font-family:ui-monospace,Menlo,monospace;font-size:8.5px;letter-spacing:.12em;color:var(--muted);margin-top:6px}
+
+.tally{display:flex;justify-content:space-between;gap:6px;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);padding:8px 0;margin-bottom:12px}
+.tally div{font-size:9px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;text-align:center;flex:1}
+.tally b{display:block;font-family:ui-monospace,Menlo,monospace;font-size:14px;letter-spacing:0;color:var(--ink);font-weight:500;margin-top:2px}
+
+.swatches{display:flex;gap:8px;margin:2px 0 14px}
+.sw{
+  width:26px;height:26px;border-radius:50%;cursor:pointer;border:1px solid rgba(36,31,29,.16);
+  position:relative;transition:transform .16s ease;
+}
+.sw:hover{transform:scale(1.08)}
+.sw[data-on="1"]{box-shadow:0 0 0 2px var(--paper),0 0 0 3px var(--ink)}
+.sw i{position:absolute;inset:0;border-radius:50%;}
+.sl{margin-bottom:9px}
+.sl label{display:flex;justify-content:space-between;font-size:9.5px;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+.sl label span{font-family:ui-monospace,Menlo,monospace;color:var(--ink)}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:14px;background:transparent;cursor:pointer;display:block;
+}
+input[type=range]::-webkit-slider-runnable-track{height:1px;background:rgba(36,31,29,.28)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:9px;height:9px;border-radius:50%;background:var(--ink);margin-top:-4px;
+  border:1px solid rgba(236,233,227,.9);
+}
+input[type=range]::-moz-range-track{height:1px;background:rgba(36,31,29,.28)}
+input[type=range]::-moz-range-thumb{width:9px;height:9px;border:0;border-radius:50%;background:var(--ink)}
+
+.row{display:flex;gap:6px;margin-top:12px}
+.row button{
+  flex:1;-webkit-appearance:none;appearance:none;background:transparent;border:1px solid var(--line);
+  border-radius:7px;padding:6px 4px;font-family:inherit;font-size:9.5px;letter-spacing:.05em;color:var(--ink);cursor:pointer;
+  transition:background .16s,border-color .16s,color .16s;
+}
+.row button:hover{background:rgba(36,31,29,.06);border-color:rgba(36,31,29,.26)}
+
+/* ---------- how to play ---------- */
+.howto{position:absolute;left:clamp(20px,3.6vw,52px);bottom:clamp(20px,3.4vh,40px);max-width:330px}
+.howto h3{font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);margin:0 0 7px;font-weight:600}
+.howto p{margin:0;font-size:12.5px;line-height:1.45;color:var(--ink)}
+.howto .gest{color:rgba(36,31,29,.42);font-size:10.5px;margin-top:5px;letter-spacing:.02em;line-height:1.4}
+
+/* ---------- fallback ---------- */
+#fallback{
+  position:fixed;inset:0;z-index:40;display:none;place-items:center;padding:24px;
+  background:var(--paper);
+}
+#fallback.show{display:grid}
+.fb{
+  max-width:430px;border:1px solid var(--line);border-radius:16px;padding:26px 26px 22px;
+  background:rgba(255,255,255,.5);text-align:left;
+}
+.fb h2{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-style:italic;font-weight:400;font-size:26px;margin:0 0 8px}
+.fb p{font-size:12.5px;line-height:1.55;color:var(--muted);margin:0 0 10px}
+.fb code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:rgba(36,31,29,.07);padding:1px 5px;border-radius:4px}
+.fb .sk{display:flex;gap:6px;margin-top:16px}
+.fb .sk div{height:44px;flex:1;border-radius:5px}
+
+/* ---------- mobile sheet ---------- */
+#sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;display:none;
+  background:rgba(247,245,240,.86);
+  -webkit-backdrop-filter:blur(22px) saturate(130%);backdrop-filter:blur(22px) saturate(130%);
+  border-top:1px solid var(--line);border-radius:18px 18px 0 0;
+  transform:translateY(calc(100% - 62px));transition:transform .34s cubic-bezier(.22,.9,.24,1);
+  padding:0 16px calc(14px + env(safe-area-inset-bottom));
+  box-shadow:0 -18px 40px -30px rgba(36,31,29,.6);
+  max-height:78vh;overflow:auto;
+}
+#sheet.open{transform:translateY(0)}
+.sheet-grip{padding:9px 0 8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.sheet-grip i{display:block;width:34px;height:3px;border-radius:3px;background:rgba(36,31,29,.24);margin:0 auto}
+.sheet-grip span{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.sheet-body{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding-bottom:6px}
+.sheet-body .full{grid-column:1/-1}
+
+@media (max-width:860px){
+  .panel{display:none}
+  #sheet{display:block}
+  .masthead{max-width:70vw;top:16px;left:16px}
+  h1{font-size:clamp(30px,9vw,42px)}
+  .caption{display:none}
+  .howto{display:none}
+  .eyebrow{font-size:9px;letter-spacing:.24em}
+}
+@media (max-width:520px){
+  .masthead{max-width:76vw}
+}
+</style>
+</head>
+<body>
+
+<div id="stage"><canvas id="gpu"></canvas></div>
+<div id="grain"></div>
+
+<div id="ui">
+  <div class="masthead">
+    <div class="eyebrow">Material Studies</div>
+    <h1>Atoll <span class="slash">/</span> Jelly.</h1>
+    <p class="caption">Six bungalows on stilts, a seaplane that comes and goes, and eagle rays gliding through the jelly below.</p>
+    <div class="pill" id="pill"><span class="dot"></span><span id="pillTxt">WEBGPU · LIVE</span></div>
+  </div>
+
+  <aside class="panel" id="panel">
+    <h2><span>The Lagoon</span><span id="clock">06:00</span></h2>
+    <div class="acts">
+      <button class="btn" id="bPlane">Seaplane <span class="k">&#8599;</span></button>
+      <button class="btn" id="bFeed">Feed the fish <span class="k">&#9679;</span></button>
+      <button class="btn" id="bRing">Float ring <span class="k">&#9675;</span></button>
+    </div>
+    <div class="meter">
+      <div class="track"><div class="fill" id="meterFill"></div></div>
+      <div class="lab"><span>SWELL</span><span id="meterVal">0.00</span></div>
+    </div>
+    <div class="tally">
+      <div>Landings<b id="tLand">0</b></div>
+      <div>Fed<b id="tFed">0</b></div>
+      <div>Afloat<b id="tRing">0</b></div>
+    </div>
+    <h2 style="margin-bottom:8px"><span>Flavour</span></h2>
+    <div class="swatches" id="swatches">
+      <div class="sw" data-f="turquoise" data-on="1" title="Turquoise"><i style="background:linear-gradient(145deg,#5fe0d6,#0e8f96)"></i></div>
+      <div class="sw" data-f="sapphire" title="Sapphire"><i style="background:linear-gradient(145deg,#7fbcff,#1245a8)"></i></div>
+      <div class="sw" data-f="lime" title="Lime"><i style="background:linear-gradient(145deg,#d9f07a,#5c9a1c)"></i></div>
+    </div>
+    <div class="sl"><label>Firmness <span id="vFirm">0.62</span></label><input id="sFirm" type="range" min="0" max="1" step="0.01" value="0.62"></div>
+    <div class="sl"><label>Wave damping <span id="vDamp">0.35</span></label><input id="sDamp" type="range" min="0" max="1" step="0.01" value="0.35"></div>
+    <div class="sl" style="margin-bottom:2px"><label>Tide <span id="vTide">+0 cm</span></label><input id="sTide" type="range" min="-1" max="1" step="0.01" value="0"></div>
+    <div class="row">
+      <button id="bReset">Reset</button>
+      <button id="bPause">Pause</button>
+      <button id="bView">Reset view</button>
+    </div>
+  </aside>
+
+  <div class="howto">
+    <h3>How to play</h3>
+    <p>Stir the lagoon. Feed the fish. Wave the seaplane off.</p>
+    <p class="gest">Drag to orbit · scroll or pinch to zoom · drag the water to stir · click a bungalow for its day · shift-drag to tilt the block</p>
+  </div>
+</div>
+
+<div id="sheet">
+  <div class="sheet-grip" id="grip"><i></i><span>The Lagoon</span><span style="width:34px"></span></div>
+  <div class="sheet-body">
+    <button class="btn full" id="mPlane">Seaplane <span class="k">&#8599;</span></button>
+    <button class="btn" id="mFeed">Feed the fish</button>
+    <button class="btn" id="mRing">Float ring</button>
+    <div class="full" style="display:flex;gap:8px;align-items:center;margin:4px 0 2px">
+      <div class="swatches" id="swatches2" style="margin:0">
+        <div class="sw" data-f="turquoise" data-on="1"><i style="background:linear-gradient(145deg,#5fe0d6,#0e8f96)"></i></div>
+        <div class="sw" data-f="sapphire"><i style="background:linear-gradient(145deg,#7fbcff,#1245a8)"></i></div>
+        <div class="sw" data-f="lime"><i style="background:linear-gradient(145deg,#d9f07a,#5c9a1c)"></i></div>
+      </div>
+      <div class="tally" style="flex:1;margin:0;border:0;padding:0">
+        <div>Landings<b id="mLand">0</b></div>
+        <div>Fed<b id="mFed">0</b></div>
+        <div>Afloat<b id="mRing">0</b></div>
+      </div>
+    </div>
+    <div class="sl full"><label>Firmness <span id="mvFirm">0.62</span></label><input id="msFirm" type="range" min="0" max="1" step="0.01" value="0.62"></div>
+    <div class="sl full"><label>Wave damping <span id="mvDamp">0.35</span></label><input id="msDamp" type="range" min="0" max="1" step="0.01" value="0.35"></div>
+    <div class="sl full"><label>Tide <span id="mvTide">+0 cm</span></label><input id="msTide" type="range" min="-1" max="1" step="0.01" value="0"></div>
+    <div class="full row" style="margin-bottom:4px">
+      <button id="mReset">Reset</button>
+      <button id="mPause">Pause</button>
+      <button id="mView">Reset view</button>
+    </div>
+  </div>
+</div>
+
+<div id="fallback">
+  <div class="fb">
+    <h2>This jelly needs WebGPU.</h2>
+    <p>The diorama is drawn with WebGPU and WGSL — no libraries, no network. Your browser isn’t exposing a WebGPU adapter right now, so the block stays in the box.</p>
+    <p>Try a recent Chrome, Edge, or Safari 26 with <code>chrome://flags/#enable-unsafe-webgpu</code> enabled, then reload.</p>
+    <div class="sk">
+      <div style="background:#5fe0d6"></div><div style="background:#0e8f96"></div>
+      <div style="background:#c99a63"></div><div style="background:#7a4a30"></div>
+    </div>
+  </div>
+</div>
